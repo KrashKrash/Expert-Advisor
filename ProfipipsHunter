@@ -1,0 +1,625 @@
+//+------------------------------------------------------------------+
+//|                                         ProfipipsHunter 2023.mq4 |
+//|                                     Telegram me @ProfipipsHunter |
+//|                                                                  |
+//+------------------------------------------------------------------+
+#property copyright     "Copyright 2024, click this to support author work"
+#property link          "https://fbs.com/?ppu=4536456"
+#property version       "2.24"
+#property description   "Join Telegram channel @Flexea @ProfipipsHunterSignal"
+#property description   "=PM @ProfipipsHunter for more info="
+#property description   " "
+#property description   "=Minimum Deposit $1,000/="
+#property description   "=EA best work on CFD M1 TF="
+#property description   "=If lower the TF (M1), the more aggressive the entries="
+#property description   "=If higher the TF (H1), the slower the entries="
+#property description   "=Entries or positions will open depending on intensity or speed of selected TF candle="
+#property description   " "
+#property description   "Click Copyright 2024 for the link of recommended broker and deposit to real account"
+
+#property icon          "EA_icon.ico"
+#property strict
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+   
+extern double    Risk             =0.01; 
+extern int       ProfitPips       =30;
+extern double    ExpBar           =2.9;
+extern int       MaxOrders        =200;
+extern int       Magic            =2024;
+extern int       SpeedEA          =500;
+extern bool      Info             =true;  
+extern color     TextColor        =White;   
+extern color     InfoDataColor    =Blue; 
+extern color     FonColor         =Black;   
+extern int       FontSizeInfo     =8;      
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+string           Commemt          ="@ProfipipsHunter";
+int              TimeFrame        =0;  
+int              TimeStart        =3; 
+int              TimeEnd          =23;
+int              HowBar           =1000; 
+int              D,o;
+double           Lot              =0;
+int              dig;
+color            FonButtonBuy     =Green;
+color            FonButtonSell    =Red;
+color            TextButtonBS     =White; 
+color            ButtonBorder     =Green;
+color            ClickButton      =Black;
+int              AccNumber        =0;
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+int OnInit()
+{
+EventSetMillisecondTimer(SpeedEA);
+D=1;
+if (Digits==5 || Digits==3)
+{D=10;}
+return(INIT_SUCCEEDED);
+}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+void OnDeinit(const int reason)
+{
+EventKillTimer();
+ObjectsDeleteAll(0,OBJ_LABEL);
+ObjectsDeleteAll(0,OBJ_RECTANGLE_LABEL);
+}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+void OnTick()
+{
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+if(AccNumber>0 && AccountNumber()!=AccNumber) 
+{
+RectLabelCreate("ERROR_FON",850,100,300,120,FonColor,1);
+PutLabelD("ERROR_TEXT1",780,110,"NOT A VALID ACCOUNT NUMBER!",1);
+PutLabelT("ERROR_TEXT2",845,130,"Contact the author:",1);
+PutLabelT("ERROR_TEXT5",845,170,"Telegram:",1);
+PutLabelD("ERROR_TEXT6",780,170,"@ProfipipsHunter @Flexea",1);
+}
+else
+{
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+   
+Lot=NormalizeDouble(AccountBalance()/100*Risk/(MarketInfo(Symbol(),MODE_TICKVALUE)*100*D),2);
+if(Lot<MarketInfo(Symbol(),MODE_MINLOT)) {Lot=MarketInfo(Symbol(),MODE_MINLOT);} 
+if(Lot>=MarketInfo(Symbol(),MODE_MAXLOT)) {Lot=MarketInfo(Symbol(),MODE_MAXLOT);}
+
+if(MarketInfo(Symbol(),MODE_LOTSTEP)==0.01)     dig =2;
+if(MarketInfo(Symbol(),MODE_LOTSTEP)==0.10)     dig =1;
+if(MarketInfo(Symbol(),MODE_LOTSTEP)==1.00)     dig =0;
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+bool GoBuy =false;
+bool GoSell =false;
+
+bool buy =false;
+bool sell =false;
+
+if(iOpen(Symbol(),TimeFrame,0)>iClose(Symbol(),TimeFrame,0) && AverageBar(HowBar)*ExpBar<(iOpen(Symbol(),TimeFrame,0)-iClose(Symbol(),TimeFrame,0))/Point)
+{
+sell=true;
+}
+
+if(iOpen(Symbol(),TimeFrame,0)<iClose(Symbol(),TimeFrame,0) && AverageBar(HowBar)*ExpBar<(iClose(Symbol(),TimeFrame,0)-iOpen(Symbol(),TimeFrame,0))/Point)
+{
+buy=true; 
+}
+  
+if(TimeHour(TimeCurrent())>=TimeStart && TimeHour(TimeCurrent())<TimeEnd)
+{    
+if(buy) {GoBuy=true;}
+if(sell) {GoSell=true;}    
+} 
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+if(CountHistBar(-1)==0)
+{
+if(Count(-1)==0 && GoSell && AccountFreeMarginCheck(Symbol(),OP_SELL,Lot)>0)
+{o=OrderSend(Symbol(),OP_SELL,Lot,Bid,5,0,0,Commemt,Magic,0,Red);}
+
+if(Count(-1)==0 && GoBuy && AccountFreeMarginCheck(Symbol(),OP_BUY,Lot)>0)
+{o=OrderSend(Symbol(),OP_BUY,Lot,Ask,5,0,0,Commemt,Magic,0,Green);}    
+//|========================= ProfipipsHunter ========================| 
+if(CountAll(-1)<MaxOrders && (CountAll(-1)<AccountInfoInteger(ACCOUNT_LIMIT_ORDERS) || AccountInfoInteger(ACCOUNT_LIMIT_ORDERS)==0) && CountBar(-1)==0)
+{
+if(Count(OP_BUY)>0 && GoBuy)
+{o=OrderSend(Symbol(),OP_BUY,Lot,Ask,10,0,0,Commemt,Magic,0,Green);}  
+
+if(Count(OP_SELL)>0 && GoSell)
+{o=OrderSend(Symbol(),OP_SELL,Lot,Bid,10,0,0,Commemt,Magic,0,Red);} 
+}
+}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+double ProfProc=AllLots(-1)*ProfitPips;
+if(ProfitAll(-1)>=ProfProc && ProfProc!=0)
+{
+ClosePos();
+}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+if(Info)
+{
+   RectLabelCreate3("INFO_fon",220,20,200,225,FonColor);
+   
+   PutLabel("INFO_LOGO",165,24,"PROFIPIPSHUNTER");
+   PutLabel("INFO_Line",215,27,"___________________________");
+   PutLabel_("INFO_txt1",215,45,"Account information");
+   PutLabel("INFO_Line2",215,47,"___________________________");
+   PutLabel("INFO_txt2",215,65,"Minimum stop:");
+   PutLabel("INFO_txt3",215,80,"Average bar:");
+   PutLabel("INFO_txt4",215,95,"Balance:");
+   PutLabel("INFO_txt5",215,110,"Equity:");
+   PutLabel("INFO_Line3",215,112,"___________________________");
+   PutLabel_("INFO_txt6",215,130,"Profit on account");
+   PutLabel("INFO_Line4",215,132,"___________________________");
+   PutLabel("INFO_txt7",215,150,"Profit on pair:");
+   PutLabel("INFO_txt8",215,165,"Total profit:");
+   PutLabel("INFO_txt9",215,180,"Profit for today:");
+   PutLabel("INFO_txt10",215,195,"Profit for yesterday:");
+   PutLabel("INFO_txt11",215,210,"Profit for week:");
+   PutLabel("INFO_txt12",215,225,"Profit for month:");
+   
+   PutLabel_("INFO_txt13",85,65,DoubleToStr(MarketInfo(Symbol(),MODE_STOPLEVEL),0));
+   PutLabel_("INFO_txt14",85,80,DoubleToStr(AverageBar(HowBar),0));
+   PutLabel_("INFO_txt15",85,95,DoubleToStr(AccountBalance(),2));
+   PutLabel_("INFO_txt16",85,110,DoubleToStr(AccountEquity(),2));
+   PutLabel_("INFO_txt17",85,150,DoubleToStr(Profit(-1),2));
+   PutLabel_("INFO_txt18",85,165,DoubleToStr(ProfitAll(-1),2));
+   PutLabel_("INFO_txt19",85,180,DoubleToStr(ProfitDey(-1),2));
+   PutLabel_("INFO_txt20",85,195,DoubleToStr(ProfitTuDey(-1),2));
+   PutLabel_("INFO_txt21",85,210,DoubleToStr(ProfitWeek(-1),2));
+   PutLabel_("INFO_txt22",85,225,DoubleToStr(ProfitMontag(-1),2));
+   
+   PutButtonBS("TRADEs_B",220,245,"BUY           " + DoubleToStr(Lot, dig),100,22,FonButtonBuy,TextButtonBS);
+   PutButtonBS("TRADEs_S",118,245,"SELL           " + DoubleToStr(Lot, dig),100,22,FonButtonSell,TextButtonBS);
+   PutLabel("INFO_txt23",80,265,"Dreams 2024");
+}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+}
+}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
+{
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+if(ObjectGetInteger(0,"TRADEs_B",OBJPROP_STATE))
+ {ObjectSetInteger(0,"TRADEs_B",OBJPROP_BGCOLOR,ClickButton);}
+else 
+ {ObjectSetInteger(0,"TRADEs_B",OBJPROP_BGCOLOR,FonButtonBuy);}
+//------------------ 
+if(ObjectGetInteger(0,"TRADEs_S",OBJPROP_STATE))
+ {ObjectSetInteger(0,"TRADEs_S",OBJPROP_BGCOLOR,ClickButton);}
+else 
+ {ObjectSetInteger(0,"TRADEs_S",OBJPROP_BGCOLOR,FonButtonSell);}
+//------------------
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+if(id==CHARTEVENT_OBJECT_CLICK)
+{string clickedChartObject=sparam;
+
+if(clickedChartObject=="TRADEs_B")
+  {o=OrderSend(Symbol(),OP_BUY,Lot,Ask,10,0,0,Commemt,Magic,0,Green);       
+   ObjectSetInteger(0,"TRADEs_B",OBJPROP_STATE,false);}
+if(clickedChartObject=="TRADEs_S")
+  {o=OrderSend(Symbol(),OP_SELL,Lot,Bid,10,0,0,Commemt,Magic,0,Red);
+   ObjectSetInteger(0,"TRADEs_S",OBJPROP_STATE,false);}
+//|========================= ProfipipsHunter ========================| 
+
+ChartRedraw();
+}}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+int CountHistBar(int type)
+{
+int count=0;
+for(int i=OrdersHistoryTotal()-1;i>=0;i--)
+ if(OrderSelect(i,SELECT_BY_POS,MODE_HISTORY))
+  {
+  if(Symbol()==OrderSymbol() && OrderMagicNumber()==Magic && OrderCloseTime()>=iTime(Symbol(),TimeFrame,0) && (type==-1 || OrderType()==type)) 
+  {
+  count++;
+  }
+  }
+return(count);}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+int CountBar(int type)
+{
+int count=0;
+for(int i=OrdersTotal()-1;i>=0;i--)
+ if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
+  {
+  if(Symbol()==OrderSymbol() && OrderMagicNumber()==Magic && OrderOpenTime()>=iTime(Symbol(),TimeFrame,0) && (type==-1 || OrderType()==type)) 
+  {
+  count++;
+  }
+  }
+return(count);}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+void ClosePos()
+{bool cl;
+ for(int i=OrdersTotal()-1;i>=0;i--)
+{if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
+{if(OrderMagicNumber()==Magic)
+{if(OrderType()==0)
+{RefreshRates();
+ cl=OrderClose(OrderTicket(),OrderLots(),NormalizeDouble(MarketInfo(OrderSymbol(),MODE_BID),Digits),10,White);}
+if(OrderType()==1)
+{RefreshRates();
+ cl=OrderClose(OrderTicket(),OrderLots(),NormalizeDouble(MarketInfo(OrderSymbol(),MODE_ASK),Digits),10,White);}}}}}
+//|========================= ProfipipsHunter ========================| 
+
+double AllLots(int type) 
+{double lot = 0;
+   for (int cnt = OrdersTotal() - 1; cnt >= 0; cnt--) {
+      if(OrderSelect(cnt, SELECT_BY_POS, MODE_TRADES))
+      {if (OrderMagicNumber()==Magic && (OrderType() == type || type==-1)) lot += OrderLots();}}
+       return (lot);}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+int CountAll(int type)
+{
+int count=0;
+for(int i=OrdersTotal()-1;i>=0;i--)
+ if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
+  {
+  if(OrderMagicNumber()==Magic &&  (type==-1 || OrderType()==type)) 
+  {
+  count++;
+  }
+  }
+return(count);}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+double BuyPric() {
+   double oldorderopenprice=0;
+   int oldticketnumber;
+   double unused = 0;
+   int ticketnumber = 0;
+   for (int cnt = OrdersTotal() - 1; cnt >= 0; cnt--) {
+      bool clos=OrderSelect(cnt, SELECT_BY_POS, MODE_TRADES);
+      if (OrderSymbol() != Symbol() || OrderMagicNumber() != Magic) continue;
+      if (OrderSymbol() == Symbol() && OrderMagicNumber() == Magic && OrderType() == OP_BUY) {
+         oldticketnumber = OrderTicket();
+         if (oldticketnumber > ticketnumber) {
+            oldorderopenprice = OrderOpenPrice();
+            unused = oldorderopenprice;
+            ticketnumber = oldticketnumber;}}}
+   return (oldorderopenprice);}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+double SellPric() {
+   double oldorderopenprice=0;
+   int oldticketnumber;
+   double unused = 0;
+   int ticketnumber = 0;
+   for (int cnt = OrdersTotal() - 1; cnt >= 0; cnt--) {
+      bool clos=OrderSelect(cnt, SELECT_BY_POS, MODE_TRADES);
+      if (OrderSymbol() != Symbol() || OrderMagicNumber() != Magic) continue;
+      if (OrderSymbol() == Symbol() && OrderMagicNumber() == Magic && OrderType() == OP_SELL) {
+         oldticketnumber = OrderTicket();
+         if (oldticketnumber > ticketnumber) {
+            oldorderopenprice = OrderOpenPrice();
+            unused = oldorderopenprice;
+            ticketnumber = oldticketnumber;}}}
+   return (oldorderopenprice);}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+double AverageBar(int countCandles)
+{
+double size=0;
+double returnSize=0;
+for(int i=1; i<=countCandles; i++) 
+{
+size+=(iHigh(Symbol(),TimeFrame,i)-iLow(Symbol(),TimeFrame,i))/Point;
+}
+returnSize=size/countCandles;
+return(returnSize);
+}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+int Count(int type)
+{
+int count=0;
+for(int i=OrdersTotal()-1;i>=0;i--)
+ if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
+  {
+  if(Symbol()==OrderSymbol() && Magic==OrderMagicNumber() && (type==-1 || OrderType()==type)) 
+  {
+  count++;
+  }
+  }
+return(count);}
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+double Profit(int type) 
+{double Profit = 0;
+ for (int cnt = OrdersTotal() - 1; cnt >= 0; cnt--) {
+ if(OrderSelect(cnt, SELECT_BY_POS, MODE_TRADES))
+{if (Symbol()==OrderSymbol() && OrderMagicNumber()==Magic && (OrderType() == type || type==-1)) Profit += OrderProfit()+OrderSwap()+OrderCommission();}}
+return (Profit);}
+
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+double ProfitAll(int type) 
+{double Profit = 0;
+   for (int cnt = OrdersTotal() - 1; cnt >= 0; cnt--) {
+      if(OrderSelect(cnt, SELECT_BY_POS, MODE_TRADES))
+      {if (OrderMagicNumber()==Magic && (OrderType() == type || type==-1)) Profit += OrderProfit()+OrderSwap()+OrderCommission();}}
+       return (Profit);}
+       
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+double ProfitDey(int type) 
+{double Profit = 0;
+   for (int cnt = OrdersHistoryTotal() - 1; cnt >= 0; cnt--) {
+      if(OrderSelect(cnt, SELECT_BY_POS, MODE_HISTORY))
+      {if (OrderMagicNumber()==Magic && OrderCloseTime()>=iTime(Symbol(),1440,0) && (OrderType() == type || type==-1)) Profit += OrderProfit()+OrderSwap()+OrderCommission();}}
+       return (Profit);}
+       
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+      
+double ProfitTuDey(int type) 
+{double Profit = 0;
+   for (int cnt = OrdersHistoryTotal() - 1; cnt >= 0; cnt--) {
+      if(OrderSelect(cnt, SELECT_BY_POS, MODE_HISTORY))
+      {if (OrderMagicNumber()==Magic && OrderCloseTime()>=iTime(Symbol(),1440,1) && OrderCloseTime()<iTime(Symbol(),1440,0) && (OrderType() == type || type==-1)) Profit += OrderProfit()+OrderSwap()+OrderCommission();}}
+       return (Profit);}
+       
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+   
+double ProfitEsTuDey(int type) 
+{double Profit = 0;
+   for (int cnt = OrdersHistoryTotal() - 1; cnt >= 0; cnt--) {
+      if(OrderSelect(cnt, SELECT_BY_POS, MODE_HISTORY))
+      {if (OrderMagicNumber()==Magic && OrderCloseTime()>=iTime(Symbol(),1440,2) && OrderCloseTime()<iTime(Symbol(),1440,1) && (OrderType() == type || type==-1)) Profit += OrderProfit()+OrderSwap()+OrderCommission();}}
+       return (Profit);}
+       
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+double ProfitWeek(int type) 
+{double Profit = 0;
+   for (int cnt = OrdersHistoryTotal() - 1; cnt >= 0; cnt--) {
+      if(OrderSelect(cnt, SELECT_BY_POS, MODE_HISTORY))
+      {if (OrderMagicNumber()==Magic && OrderCloseTime()>=iTime(Symbol(),10080,0) && (OrderType() == type || type==-1)) Profit += OrderProfit()+OrderSwap()+OrderCommission();}}
+       return (Profit);}
+       
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+          
+double ProfitMontag(int type) 
+{double Profit = 0;
+   for (int cnt = OrdersHistoryTotal() - 1; cnt >= 0; cnt--) {
+      if(OrderSelect(cnt, SELECT_BY_POS, MODE_HISTORY))
+      {if (OrderMagicNumber()==Magic && OrderCloseTime()>=iTime(Symbol(),43200,0) && (OrderType() == type || type==-1)) Profit += OrderProfit()+OrderSwap()+OrderCommission();}}
+       return (Profit);}
+       
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+void PutLabel(string name,int x,int y,string text)
+  {ObjectCreate(0,name,OBJ_LABEL,0,0,0);
+//--- установим координаты метки
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,y);
+//--- установим угол графика, относительно которого будут определяться координаты точки
+   ObjectSetInteger(0,name,OBJPROP_CORNER,1);
+//--- установим текст
+   ObjectSetString(0,name,OBJPROP_TEXT,text);
+//--- установим шрифт текста
+   ObjectSetString(0,name,OBJPROP_FONT,"Arial");
+//--- установим размер шрифта
+   ObjectSetInteger(0,name,OBJPROP_FONTSIZE,FontSizeInfo);
+//--- установим цвет
+   ObjectSetInteger(0,name,OBJPROP_COLOR,TextColor);
+//--- скроем (true) или отобразим (false) имя графического объекта в списке объектов
+   ObjectSetInteger(0,name,OBJPROP_HIDDEN,false);
+//--- отобразим на переднем (false) или заднем (true) плане
+   ObjectSetInteger(0,name,OBJPROP_BACK,false);}
+   
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+void PutLabel_(string name,int x,int y,string text)
+  {ObjectCreate(0,name,OBJ_LABEL,0,0,0);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,y);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_CORNER,1);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetString(0,name,OBJPROP_TEXT,text);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetString(0,name,OBJPROP_FONT,"Arial");
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_FONTSIZE,FontSizeInfo);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_COLOR,InfoDataColor);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_HIDDEN,false);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BACK,false);}
+   
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+bool RectLabelCreate3(string  name, int x,int y, int width, int height, color back_clr)
+  {ResetLastError(); 
+//|========================= ProfipipsHunter ========================| 
+if(!ObjectCreate(0,name,OBJ_RECTANGLE_LABEL,0,0,0)) 
+  {return(false);} 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x); 
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,y); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_XSIZE,width); 
+   ObjectSetInteger(0,name,OBJPROP_YSIZE,height); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BGCOLOR,back_clr); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BORDER_TYPE,BORDER_SUNKEN); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_CORNER,1); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_COLOR,Blue); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_WIDTH,1); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BACK,false); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_HIDDEN,false); 
+//|========================= ProfipipsHunter ========================| 
+return(true);} 
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+
+void PutButtonBS(string name,int x,int y,string text,int BWidth2,int BHeigh2,color FonButtonBS,color TXTButtonBS)
+  {ObjectCreate(0,name,OBJ_BUTTON,0,0,0);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,y);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_XSIZE,BWidth2);
+   ObjectSetInteger(0,name,OBJPROP_YSIZE,BHeigh2);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_CORNER,1);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetString(0,name,OBJPROP_TEXT,text);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetString(0,name,OBJPROP_FONT,"Arial");
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_FONTSIZE,FontSizeInfo);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_COLOR,TXTButtonBS);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BGCOLOR,FonButtonBS);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BORDER_COLOR,ButtonBorder);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_HIDDEN,false);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BACK,false);
+  }
+  
+void PutLabelT(string name,int x,int y,string text, int space)
+  {ObjectCreate(0,name,OBJ_LABEL,0,0,0);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,y);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_CORNER, space);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetString(0,name,OBJPROP_TEXT,text);
+//--- установим шрифт текста
+   ObjectSetString(0,name,OBJPROP_FONT,"Arial");
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_FONTSIZE,FontSizeInfo);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_COLOR,TextColor);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_HIDDEN,false);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BACK,false);}
+   
+   
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+
+void PutLabelD(string name,int x,int y,string data,int space)
+  {ObjectCreate(0,name,OBJ_LABEL,0,0,0);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,y);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_CORNER,space);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetString(0,name,OBJPROP_TEXT,data);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetString(0,name,OBJPROP_FONT,"Arial");
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_FONTSIZE,FontSizeInfo);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_COLOR,InfoDataColor);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_HIDDEN,false);
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BACK,false);}
+
+//+------------------------------------------------------------------+
+//|========================= ProfipipsHunter ========================|                                                    
+//+------------------------------------------------------------------+  
+
+bool RectLabelCreate(string  name, int x,int y, int width, int height, color back_clr, int space)
+  {ResetLastError(); 
+//|========================= ProfipipsHunter ========================| 
+if(!ObjectCreate(0,name,OBJ_RECTANGLE_LABEL,0,0,0)) 
+  {return(false);} 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x); 
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,y); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_XSIZE,width); 
+   ObjectSetInteger(0,name,OBJPROP_YSIZE,height); 
+//|========================= ProfipipsHunter ========================|  
+   ObjectSetInteger(0,name,OBJPROP_BGCOLOR,back_clr); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BORDER_TYPE,BORDER_SUNKEN); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_CORNER,space); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_COLOR,Blue); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_WIDTH,1); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_BACK,false); 
+//|========================= ProfipipsHunter ========================| 
+   ObjectSetInteger(0,name,OBJPROP_HIDDEN,false); 
+//|========================= ProfipipsHunter ========================| 
+return(true);} 
+
+//|========================= ProfipipsHunter ========================| 
+
+void OnTimer()
+  {
+   RefreshRates();
+   OnTick();
+  }
